@@ -1,11 +1,18 @@
 import { useState } from 'react';
 
-const emptyForm = { name: '', basePrice: '', stockQty: '', categoryId: '', description: '' };
+const emptyForm = {
+  name: '',
+  basePrice: '',
+  stockQty: '',
+  categoryId: '',
+  description: '',
+  discountDepartment: '',
+};
 
 export default function ProductsPanel({ products, categories, role, onCreate, onDelete }) {
   const [form, setForm] = useState(emptyForm);
-  const canWrite = role === 'STAFF' || role === 'ADMIN';
-  const canDelete = role === 'ADMIN';
+  const canWrite = role === 'STAFF';
+  const canDelete = role === 'STAFF';
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -17,6 +24,7 @@ export default function ProductsPanel({ products, categories, role, onCreate, on
       stockQty: form.stockQty ? parseInt(form.stockQty, 10) : 0,
       categoryId: form.categoryId,
       description: form.description || undefined,
+      discountDepartment: form.discountDepartment || undefined,
     });
     setForm(emptyForm);
   };
@@ -65,6 +73,15 @@ export default function ProductsPanel({ products, categories, role, onCreate, on
             <label htmlFor="p-desc">Staff notes (used to generate the AI description)</label>
             <textarea id="p-desc" rows={2} value={form.description} onChange={update('description')} />
           </div>
+          <div className="field">
+            <label htmlFor="p-discount-dept">Discount department (optional)</label>
+            <input
+              id="p-discount-dept"
+              value={form.discountDepartment}
+              onChange={update('discountDepartment')}
+              placeholder="e.g. Computer Science — students from this department get 10% off"
+            />
+          </div>
           <button type="submit" className="btn-primary" disabled={!categories.length}>
             Add product
           </button>
@@ -84,6 +101,7 @@ export default function ProductsPanel({ products, categories, role, onCreate, on
               <th>Price</th>
               <th>Stock</th>
               <th>AI description</th>
+              <th>Discount dept.</th>
               {canDelete && <th></th>}
             </tr>
           </thead>
@@ -96,6 +114,7 @@ export default function ProductsPanel({ products, categories, role, onCreate, on
                 <td>${Number(p.basePrice).toFixed(2)}</td>
                 <td>{p.stockQty}</td>
                 <td className="ai-desc">{p.aiDescription || '—'}</td>
+                <td>{p.discountDepartment || '—'}</td>
                 {canDelete && (
                   <td>
                     <button className="btn-danger" onClick={() => onDelete(p.id)}>

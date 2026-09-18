@@ -5,12 +5,28 @@ const { verifyDepartmentEnrollment } = require('../services/peerClient');
 
 const router = express.Router();
 
+// AD's free-text department field and a product's discountDepartment tag
+// won't always be written the same way ("CS" vs "Computer Science") — map
+// known variants to one canonical form before comparing them.
+const DEPARTMENT_ALIASES = {
+  cs: 'computer science',
+  'comp sci': 'computer science',
+  compsci: 'computer science',
+  'computer science': 'computer science',
+};
+
+function normalizeDepartment(name) {
+  if (!name) return null;
+  const key = name.trim().toLowerCase();
+  return DEPARTMENT_ALIASES[key] || key;
+}
+
 router.use(verifyJwt);
 
 // Any authenticated user places an order for themselves.
 router.post('/', async (req, res) => {
   try {
-    const { items, discountCode } = req.body; // items: [{ productId, quantity }]
+    const { items } = req.body; // items: [{ productId, quantity }]
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'items is required' });
     }
@@ -18,27 +34,45 @@ router.post('/', async (req, res) => {
     const products = await prisma.product.findMany({
       where: { id: { in: items.map((i) => parseInt(i.productId)) } },
     });
-    const priceById = new Map(products.map((p) => [p.id, Number(p.basePrice)]));
+    const productById = new Map(products.map((p) => [p.id, p]));
 
+    // No student-entered discount code — eligibility is derived entirely
+    // from what's in the cart (a product tagged with a discountDepartment)
+    // against the buyer's own AD department claim (proposal §9.2's "CS
+    // jacket" scenario). A product can only ever discount itself.
     let totalAmount = 0;
+    let hasEligibleItem = false;
     const orderItemsData = items.map((i) => {
       const productId = parseInt(i.productId);
-      const unitPrice = priceById.get(productId);
-      if (unitPrice === undefined) throw new Error(`Unknown productId ${productId}`);
-      totalAmount += unitPrice * i.quantity;
-      return { productId, quantity: i.quantity, unitPrice };
+      const product = productById.get(productId);
+      if (!product) throw new Error(`Unknown productId ${productId}`);
+      const unitPrice = Number(product.basePrice);
+      const lineTotal = unitPrice * i.quantity;
+
+      const isEligible =
+        product.discountDepartment &&
+        req.user.department &&
+        normalizeDepartment(product.discountDepartment) === normalizeDepartment(req.user.department);
+      if (isEligible) hasEligibleItem = true;
+
+      totalAmount += lineTotal;
+      return { productId, quantity: i.quantity, unitPrice, lineTotal, isEligible };
     });
 
-    // Discount requires live verification against the partner enrollment API;
-    // fail-closed per proposal §9.2 — any partner failure just skips it.
+    // Verification is a single live call against the partner enrollment API
+    // (only made when the cart actually contains a department-tagged item —
+    // no point calling out for an all-generic-merch order). Fail-closed per
+    // proposal §9.2 — any partner failure just skips the discount.
     let discountApplied = false;
-    if (discountCode) {
+    if (hasEligibleItem) {
       const eligible = await verifyDepartmentEnrollment({
         studentId: req.user.id,
         department: req.user.department,
       });
       if (eligible) {
-        totalAmount *= 0.9;
+        for (const item of orderItemsData) {
+          if (item.isEligible) totalAmount -= item.lineTotal * 0.1;
+        }
         discountApplied = true;
       }
     }
@@ -48,7 +82,13 @@ router.post('/', async (req, res) => {
         userId: req.user.id,
         totalAmount,
         discountApplied,
-        items: { create: orderItemsData },
+        items: {
+          create: orderItemsData.map(({ productId, quantity, unitPrice }) => ({
+            productId,
+            quantity,
+            unitPrice,
+          })),
+        },
       },
       include: { items: true },
     });

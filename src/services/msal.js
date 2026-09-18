@@ -26,4 +26,21 @@ function mapGroupsToRole(groupIds) {
   return 'STUDENT';
 }
 
-module.exports = { getMsalApp, mapGroupsToRole };
+// The ID token has no "department" claim (not a standard Entra ID optional
+// claim) — the peer discount check needs it, so fetch it from Graph /me
+// with the Graph access token acquired alongside the ID token.
+async function fetchDepartment(graphAccessToken) {
+  try {
+    const response = await fetch('https://graph.microsoft.com/v1.0/me?$select=department', {
+      headers: { Authorization: `Bearer ${graphAccessToken}` },
+    });
+    if (!response.ok) return null;
+    const profile = await response.json();
+    return profile.department || null;
+  } catch (error) {
+    console.warn(`Graph /me lookup failed: ${error.message}`);
+    return null;
+  }
+}
+
+module.exports = { getMsalApp, mapGroupsToRole, fetchDepartment };

@@ -48,12 +48,19 @@ router.put('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) =>
   }
 });
 
-router.delete('/:id', verifyJwt, requireRole('ADMIN'), async (req, res) => {
+router.delete('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
   try {
     await prisma.category.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ success: true, message: 'Category deleted' });
   } catch (error) {
     if (error.code === 'P2025') return res.status(404).json({ success: false, error: 'Category not found' });
+    // FK constraint: existing products still reference this category.
+    if (error.code === 'P2003') {
+      return res.status(409).json({
+        success: false,
+        error: 'Cannot delete: this category still has products in it',
+      });
+    }
     res.status(500).json({ success: false, error: 'Delete failed' });
   }
 });

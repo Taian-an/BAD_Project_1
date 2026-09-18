@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { request } from './api';
+import { API_BASE, request } from './api';
 import LoginCard from './components/LoginCard';
 import CategoriesPanel from './components/CategoriesPanel';
 import ProductsPanel from './components/ProductsPanel';
+import OrdersPanel from './components/OrdersPanel';
 
 const STORAGE_KEY = 'campus-store-auth';
 
@@ -14,14 +15,49 @@ function loadAuth() {
   }
 }
 
+// The JWT's payload is base64url, not base64 — the API never re-verifies it
+// client-side, this is purely to read the claims already issued to us.
+function decodeJwtPayload(token) {
+  const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(atob(payload));
+}
+
+// After the Azure AD redirect flow, /auth/callback sends the browser back
+// here with #token=... (never a query string, so it's never sent to a
+// server or logged). Pull it out once and scrub it from the URL.
+function consumeAuthFragment() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#token=') && !hash.startsWith('#error=')) return null;
+
+  const params = new URLSearchParams(hash.slice(1));
+  window.history.replaceState(null, '', window.location.pathname);
+
+  const token = params.get('token');
+  if (!token) return { error: params.get('error') || 'Azure AD login failed' };
+
+  const claims = decodeJwtPayload(token);
+  return {
+    auth: {
+      token,
+      user: { id: claims.sub, email: claims.email, role: claims.role, department: claims.department },
+    },
+  };
+}
+
 export default function App() {
-  const [auth, setAuth] = useState(loadAuth);
+  const fragment = useState(consumeAuthFragment)[0];
+  const [auth, setAuth] = useState(() => fragment?.auth || loadAuth());
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
-  const [error, setError] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [error, setError] = useState(fragment?.error || '');
 
   const token = auth?.token;
   const role = auth?.user?.role;
+
+  useEffect(() => {
+    if (fragment?.auth) localStorage.setItem(STORAGE_KEY, JSON.stringify(fragment.auth));
+  }, [fragment]);
 
   const refreshCategories = useCallback(async () => {
     const { data } = await request('/api/categories');
@@ -33,10 +69,23 @@ export default function App() {
     setProducts(data);
   }, []);
 
+  // STUDENT only ever sees their own orders; STAFF/ADMIN see every order
+  // (matches the GET /api/orders vs /api/orders/mine split in orders.js).
+  const refreshOrders = useCallback(async () => {
+    if (!token) return;
+    const path = role === 'STUDENT' ? '/api/orders/mine' : '/api/orders';
+    const { data } = await request(path, { token });
+    setOrders(data);
+  }, [token, role]);
+
   useEffect(() => {
     refreshCategories().catch((err) => setError(err.message));
     refreshProducts().catch((err) => setError(err.message));
   }, [refreshCategories, refreshProducts]);
+
+  useEffect(() => {
+    if (token) refreshOrders().catch((err) => setError(err.message));
+  }, [token, refreshOrders]);
 
   const runOrReportError = async (action) => {
     setError('');
@@ -47,13 +96,9 @@ export default function App() {
     }
   };
 
-  const handleLogin = (form) =>
-    runOrReportError(async () => {
-      const { token: newToken, user } = await request('/auth/dev-login', { method: 'POST', body: form });
-      const next = { token: newToken, user };
-      setAuth(next);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    });
+  const handleAzureLogin = () => {
+    window.location.href = `${API_BASE}/auth/login`;
+  };
 
   const handleLogout = () => {
     setAuth(null);
@@ -84,6 +129,20 @@ export default function App() {
       await refreshProducts();
     });
 
+  // Returns the created order (so OrdersPanel can show the discount result)
+  // instead of just swallowing it like the CRUD handlers above.
+  const handlePlaceOrder = async (body) => {
+    setError('');
+    try {
+      const { data } = await request('/api/orders', { method: 'POST', token, body });
+      await refreshOrders();
+      return data;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    }
+  };
+
   return (
     <div className="app">
       <div className="topbar">
@@ -101,9 +160,12 @@ export default function App() {
       {error && <div className="error-banner">{error}</div>}
 
       {!auth ? (
-        <LoginCard onLogin={handleLogin} />
+        <LoginCard onAzureLogin={handleAzureLogin} />
       ) : (
         <>
+          {role === 'STUDENT' && (
+            <OrdersPanel role={role} products={products} orders={orders} onPlaceOrder={handlePlaceOrder} />
+          )}
           <CategoriesPanel
             categories={categories}
             role={role}
@@ -117,6 +179,9 @@ export default function App() {
             onCreate={handleCreateProduct}
             onDelete={handleDeleteProduct}
           />
+          {role === 'STAFF' && (
+            <OrdersPanel role={role} products={products} orders={orders} onPlaceOrder={handlePlaceOrder} />
+          )}
         </>
       )}
     </div>

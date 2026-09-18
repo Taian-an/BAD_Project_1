@@ -49,6 +49,9 @@ model Product {
   imageUrl      String?
   description   String?  @db.Text
   aiDescription String?  @db.Text
+  // Ties a product to a department for the peer discount check (proposal
+  // §9.2's "CS jacket") — null means no department discount applies to it.
+  discountDepartment String?  @db.VarChar(100)
   categoryId    Int
   createdById   Int
   createdAt     DateTime @default(now())

@@ -3,8 +3,8 @@ import { useState } from 'react';
 export default function CategoriesPanel({ categories, role, onCreate, onDelete }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const canWrite = role === 'STAFF' || role === 'ADMIN';
-  const canDelete = role === 'ADMIN';
+  const canWrite = role === 'STAFF';
+  const canDelete = role === 'STAFF';
 
   const handleSubmit = async (e) => {
     e.preventDefault();

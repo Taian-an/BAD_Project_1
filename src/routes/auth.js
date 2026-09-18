@@ -68,7 +68,7 @@ router.get('/login', async (req, res) => {
 
 router.get('/callback', async (req, res) => {
   try {
-    const { getMsalApp, mapGroupsToRole } = require('../services/msal');
+    const { getMsalApp, mapGroupsToRole, fetchDepartment } = require('../services/msal');
     const tokenResponse = await getMsalApp().acquireTokenByCode({
       code: req.query.code,
       scopes: ['user.read'],
@@ -77,23 +77,25 @@ router.get('/callback', async (req, res) => {
 
     const claims = tokenResponse.idTokenClaims;
     const role = mapGroupsToRole(claims.groups || []);
+    const department = claims.department || (await fetchDepartment(tokenResponse.accessToken));
     const user = await upsertUserFromAd({
       adObjectId: claims.oid,
       email: claims.preferred_username || claims.email,
       displayName: claims.name,
       role,
-      department: claims.department || null,
+      department,
     });
 
     const token = issueJwt(user);
-    res.json({
-      success: true,
-      token,
-      user: { id: user.id, email: user.email, role: user.role, department: user.department },
-    });
+    // Hand the token to the SPA via the URL fragment (never sent to any
+    // server, unlike a query string) rather than rendering JSON here — the
+    // frontend picks it up from location.hash on load (see App.jsx).
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/#token=${token}`);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: 'AD login failed' });
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/#error=${encodeURIComponent('AD login failed')}`);
   }
 });
 
