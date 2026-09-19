@@ -12,6 +12,15 @@ same Azure VM — new port (4002), new MySQL database (`campus_store`), new PM2
 process (`campus-store-api`), new Nginx location (`/campus-store/`) — without
 touching the Lab's existing `/content` or `/api` routes.
 
+## Live deployment
+
+- API: **https://campus-store-taian.duckdns.org/campus-store/**
+- Admin frontend (login here): **https://campus-store-taian.duckdns.org/campus-store/admin/**
+
+Free DuckDNS subdomain pointed at the VM's public IP, with a Let's Encrypt
+certificate issued via `certbot --nginx` (auto-renews). Plain HTTP redirects
+to HTTPS. The VM has to actually be running for either link to respond.
+
 ## Admin frontend (Product/Category CRUD)
 
 `frontend-admin/` is a small React + Vite app for exercising the RBAC-gated
