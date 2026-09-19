@@ -14,11 +14,12 @@ touching the Lab's existing `/content` or `/api` routes.
 
 ## Live deployment
 
-**https://campus-store-taian.duckdns.org/campus-store/**
+- API: **https://campus-store-taian.duckdns.org/campus-store/**
+- Admin frontend (login here): **https://campus-store-taian.duckdns.org/campus-store/admin/**
 
 Free DuckDNS subdomain pointed at the VM's public IP, with a Let's Encrypt
 certificate issued via `certbot --nginx` (auto-renews). Plain HTTP redirects
-to HTTPS. Try `GET /campus-store/health` or `GET /campus-store/api/products`.
+to HTTPS. The VM has to actually be running for either link to respond.
 
 ## Admin frontend (Product/Category CRUD)
 
@@ -34,8 +35,11 @@ npm run dev   # http://localhost:5173, talks to the API on :4002
 ```
 
 Uses the same `AUTH_MODE=mock` dev login as the API. A production build
-(`npm run build`) is base-pathed to `/campus-store/` (see `vite.config.js`)
-so it can eventually be served by the same Nginx block as the API.
+(`npm run build`) is base-pathed to `/campus-store/admin/` (see
+`vite.config.js`) and served as static files from its own Nginx location,
+separate from the API's `/campus-store/` proxy block:
+
+**https://campus-store-taian.duckdns.org/campus-store/admin/**
 
 ## Stack
 
@@ -123,3 +127,10 @@ Ships `src/`, `package.json`, and `prisma/` to the VM, runs
 `prisma migrate deploy`, and restarts the `campus-store-api` PM2 process — see
 `deploy.sh` for the exact steps. The corresponding Nginx `location` block is
 documented in the proposal (§10.1) and applied directly on the VM.
+
+The admin frontend isn't wired into `deploy.sh` yet — deploy it manually:
+
+```bash
+cd frontend-admin && npm run build
+scp -r -i ../../bad-vps-01_key.pem dist/* azureuser@<VM_HOST>:/var/www/campus-store-admin/
+```
