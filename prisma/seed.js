@@ -17,7 +17,6 @@ const CATEGORIES = [
 ];
 
 const USERS = [
-  { email: 'admin@uni.edu', displayName: 'Alice Admin', role: 'ADMIN', department: null },
   { email: 'staff.apparel@uni.edu', displayName: 'Sam Staff', role: 'STAFF', department: 'Retail Ops' },
   { email: 'staff.electronics@uni.edu', displayName: 'Erin Staff', role: 'STAFF', department: 'Retail Ops' },
   { email: 'student1@uni.edu', displayName: 'Wei Chen', role: 'STUDENT', department: 'CS' },

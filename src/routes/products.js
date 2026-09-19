@@ -27,9 +27,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// STAFF/ADMIN create a product; an AI call generates the SEO-friendly
+// STAFF creates a product; an AI call generates the SEO-friendly
 // storefront description that's actually shown to students (proposal §8).
-router.post('/', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
+router.post('/', verifyJwt, requireRole('STAFF'), async (req, res) => {
   try {
     const { name, basePrice, stockQty, imageUrl, description, categoryId, discountDepartment } = req.body;
     if (!name || basePrice === undefined || !categoryId) {
@@ -58,7 +58,7 @@ router.post('/', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
   }
 });
 
-router.put('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
+router.put('/:id', verifyJwt, requireRole('STAFF'), async (req, res) => {
   try {
     const { name, basePrice, stockQty, imageUrl, description, categoryId, discountDepartment } = req.body;
     const data = { name, basePrice, stockQty, imageUrl, description };
@@ -76,7 +76,7 @@ router.put('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) =>
   }
 });
 
-router.delete('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
+router.delete('/:id', verifyJwt, requireRole('STAFF'), async (req, res) => {
   try {
     await prisma.product.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ success: true, message: 'Product deleted' });

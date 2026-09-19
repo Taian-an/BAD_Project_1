@@ -19,9 +19,7 @@ function getMsalApp() {
 
 // Maps AD security-group membership to an internal role (proposal §5/§6).
 function mapGroupsToRole(groupIds) {
-  const adminGroup = process.env.AD_ADMIN_GROUP_ID;
   const staffGroup = process.env.AD_STAFF_GROUP_ID;
-  if (adminGroup && groupIds.includes(adminGroup)) return 'ADMIN';
   if (staffGroup && groupIds.includes(staffGroup)) return 'STAFF';
   return 'STUDENT';
 }
