@@ -5,7 +5,7 @@ const { verifyJwt, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.use(verifyJwt, requireRole('ADMIN'));
+router.use(verifyJwt, requireRole('STAFF'));
 
 router.get('/', async (req, res) => {
   const users = await prisma.user.findMany({
@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
 router.put('/:id/role', async (req, res) => {
   try {
     const { role } = req.body;
-    if (!['STUDENT', 'STAFF', 'ADMIN'].includes(role)) {
+    if (!['STUDENT', 'STAFF'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
     const user = await prisma.user.update({ where: { id: parseInt(req.params.id) }, data: { role } });

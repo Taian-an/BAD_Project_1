@@ -5,7 +5,7 @@ import { useState } from 'react';
 // discountDepartment matching the buyer's own AD department claim, and only
 // then calls the peer enrollment API to verify it (proposal §9.2's "CS
 // jacket" scenario). STAFF instead sees every order placed, not a shopping
-// form (backend gates GET /api/orders to STAFF/ADMIN).
+// form (backend gates GET /api/orders to STAFF).
 export default function OrdersPanel({ role, products, orders, onPlaceOrder }) {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState(1);

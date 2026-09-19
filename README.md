@@ -24,8 +24,8 @@ to HTTPS. Try `GET /campus-store/health` or `GET /campus-store/api/products`.
 
 `frontend-admin/` is a small React + Vite app for exercising the RBAC-gated
 Category/Product CRUD and the AI description generation visually — everyone
-sees the catalog; STAFF/ADMIN see create forms; only ADMIN sees delete
-buttons, matching `src/middleware/auth.js` exactly.
+sees the catalog; only STAFF sees the create form and delete buttons,
+matching the backend's `requireRole('STAFF')` exactly.
 
 ```bash
 cd frontend-admin
@@ -82,8 +82,7 @@ curl -X POST http://localhost:4002/api/categories \
 | Role | Permissions |
 |---|---|
 | STUDENT | Browse products, create/view own orders |
-| STAFF | + CRUD Product/Category, view all orders, trigger AI description |
-| ADMIN | + manage users/roles, issue/revoke peer API keys |
+| STAFF | + CRUD Product/Category, view all orders, trigger AI description, manage users/roles, issue/revoke peer API keys |
 
 Enforced by `requireRole(...roles)` in `src/middleware/auth.js`, reading the
 role claim from the verified JWT — the client's own claims are never trusted.

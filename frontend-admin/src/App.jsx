@@ -69,7 +69,7 @@ export default function App() {
     setProducts(data);
   }, []);
 
-  // STUDENT only ever sees their own orders; STAFF/ADMIN see every order
+  // STUDENT only ever sees their own orders; STAFF sees every order
   // (matches the GET /api/orders vs /api/orders/mine split in orders.js).
   const refreshOrders = useCallback(async () => {
     if (!token) return;

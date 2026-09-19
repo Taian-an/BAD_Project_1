@@ -23,7 +23,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
+router.post('/', verifyJwt, requireRole('STAFF'), async (req, res) => {
   try {
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
@@ -34,7 +34,7 @@ router.post('/', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
   }
 });
 
-router.put('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
+router.put('/:id', verifyJwt, requireRole('STAFF'), async (req, res) => {
   try {
     const { name, description } = req.body;
     const category = await prisma.category.update({
@@ -48,7 +48,7 @@ router.put('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) =>
   }
 });
 
-router.delete('/:id', verifyJwt, requireRole('STAFF', 'ADMIN'), async (req, res) => {
+router.delete('/:id', verifyJwt, requireRole('STAFF'), async (req, res) => {
   try {
     await prisma.category.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ success: true, message: 'Category deleted' });

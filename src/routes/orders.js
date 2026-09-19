@@ -113,8 +113,8 @@ router.get('/mine', async (req, res) => {
   }
 });
 
-// STAFF/ADMIN can see every order, not just their own.
-router.get('/', requireRole('STAFF', 'ADMIN'), async (req, res) => {
+// STAFF can see every order, not just their own.
+router.get('/', requireRole('STAFF'), async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       include: { items: true, user: { select: { id: true, email: true, department: true } } },
