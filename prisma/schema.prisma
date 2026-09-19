@@ -10,7 +10,6 @@ datasource db {
 enum Role {
   STUDENT
   STAFF
-  ADMIN
 }
 
 enum OrderStatus {

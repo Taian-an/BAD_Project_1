@@ -18,10 +18,15 @@ ssh -i "$KEY_PATH" "$VM_USER@$VM_HOST" << EOF
     cd $TARGET_DIR
     npm ci --omit=dev
     npx prisma generate
+
+    # prisma migrate deploy needs DATABASE_URL directly (it doesn't run our
+    # Key Vault loader) — pull it from Key Vault via the same secrets.js the
+    # app uses, so no connection string ever lands in this script or a file.
+    export DATABASE_URL=$(KEY_VAULT_URL=https://csx4110-kv.vault.azure.net/ node -e "require('./src/config/secrets').loadSecrets().then(s => process.stdout.write(s.databaseUrl))")
     npx prisma migrate deploy
 
-    PORT=4002 BASE_PATH=/campus-store pm2 restart $PM2_APP_NAME || \
-    PORT=4002 BASE_PATH=/campus-store pm2 start src/server.js --name $PM2_APP_NAME
+    KEY_VAULT_URL=https://csx4110-kv.vault.azure.net/ PORT=4002 BASE_PATH=/campus-store pm2 restart $PM2_APP_NAME --update-env || \
+    KEY_VAULT_URL=https://csx4110-kv.vault.azure.net/ PORT=4002 BASE_PATH=/campus-store pm2 start src/server.js --name $PM2_APP_NAME
 EOF
 
 echo "Deployment complete! CampusStore is live under /campus-store on the shared VM."

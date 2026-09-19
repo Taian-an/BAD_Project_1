@@ -31,7 +31,7 @@ router.post('/dev-login', async (req, res) => {
     const { email, displayName, role, department } = req.body;
     if (!email) return res.status(400).json({ error: 'email is required' });
 
-    const finalRole = ['STUDENT', 'STAFF', 'ADMIN'].includes(role) ? role : 'STUDENT';
+    const finalRole = ['STUDENT', 'STAFF'].includes(role) ? role : 'STUDENT';
     const user = await upsertUserFromAd({
       adObjectId: `mock-${email}`,
       email,
