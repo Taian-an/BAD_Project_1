@@ -13,7 +13,10 @@ async function loadSecrets() {
     };
   }
 
-  console.log('Connecting to Azure Key Vault...');
+  // stderr, not stdout — deploy.sh captures this function's return value via
+  // `node -e "...loadSecrets().then(s => process.stdout.write(s.xyz))"`, and
+  // a stray console.log here would corrupt that captured value.
+  console.error('Connecting to Azure Key Vault...');
   const { DefaultAzureCredential } = require('@azure/identity');
   const { SecretClient } = require('@azure/keyvault-secrets');
 
@@ -41,7 +44,7 @@ async function loadSecrets() {
     })
   );
 
-  console.log('Secrets fetched from Key Vault.');
+  console.error('Secrets fetched from Key Vault.');
   return Object.fromEntries(entries);
 }
 
